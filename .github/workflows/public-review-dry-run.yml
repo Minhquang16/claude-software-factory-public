@@ -1,0 +1,49 @@
+# Isolated public dry run. Never reads private repositories and never uses Claude/OAuth.
+name: Public reviewer pipeline dry-run (no OAuth)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tests/reviewer-smoke/**"
+      - ".github/workflows/public-review-dry-run.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  public-smoke-review:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read PR diff through GitHub API (never execute code)
+        env:
+          GH_TOKEN: \${{ github.token }}
+          REPO: \${{ github.repository }}
+          PR: \${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | (.patch // "")' > "$RUNNER_TEMP/pr.patch"
+          if ! grep -Fq 'REVIEW_TEST_MARKER_DO_NOT_DEPLOY' "$RUNNER_TEMP/pr.patch"; then
+            echo "::error::Expected fixture marker absent"
+            exit 1
+          fi
+          echo "PASS: Read public test diff and found fixture marker. No PR code executed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post fixed test feedback (without diff or credentials)
+        env:
+          GH_TOKEN: \${{ github.token }}
+          REPO: \${{ github.repository }}
+          PR: \${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/body.md" <<'EOF'
+          <!-- public-review-pipeline-test -->
+          **Automated public review transport: PASS (dry run).**
+
+          Confirmed: this workflow can read a synthetic public PR diff and post feedback.
+          This is NOT a Claude review; no OAuth, private repository access or executable PR code was used.
+          EOF
+          gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$RUNNER_TEMP/body.md" --jq .html_url
