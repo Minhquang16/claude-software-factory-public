@@ -20,9 +20,9 @@ jobs:
     steps:
       - name: Read PR diff through GitHub API (never execute code)
         env:
-          GH_TOKEN: \${{ github.token }}
-          REPO: \${{ github.repository }}
-          PR: \${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | (.patch // "")' > "$RUNNER_TEMP/pr.patch"
@@ -34,9 +34,9 @@ jobs:
 
       - name: Post fixed test feedback (without diff or credentials)
         env:
-          GH_TOKEN: \${{ github.token }}
-          REPO: \${{ github.repository }}
-          PR: \${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/body.md" <<'EOF'
