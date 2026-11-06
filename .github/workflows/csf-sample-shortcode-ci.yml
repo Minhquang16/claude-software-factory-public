@@ -1,0 +1,55 @@
+# CI cho plugin mẫu examples/csf-sample-shortcode: chạy `composer lint` và `composer test`.
+# Không dùng secrets, không deploy, không kết nối môi trường nào ngoài registry/GitHub để tải dependency.
+name: csf-sample-shortcode CI
+
+on:
+  pull_request:
+    paths:
+      - "examples/csf-sample-shortcode/**"
+      - ".github/workflows/csf-sample-shortcode-ci.yml"
+
+# Quyền tối thiểu: GITHUB_TOKEN chỉ đọc nội dung repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: csf-sample-shortcode-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    name: lint + test (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # composer.lock cần PHP >= 8.1 (doctrine/instantiator ^8.1) dù plugin hỗ trợ PHP 8.0.
+        php: ["8.1", "8.3"]
+    defaults:
+      run:
+        working-directory: examples/csf-sample-shortcode
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Validate composer.json / composer.lock
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies (theo composer.lock)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: composer lint (php -l + PHPCS + PHPStan)
+        run: composer lint
+
+      - name: composer test (PHPUnit)
+        run: composer test

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<ruleset name="CSF Sample Shortcode">
+	<description>WPCS 3 cho plugin mẫu.</description>
+	<file>csf-sample-shortcode.php</file>
+	<file>includes</file>
+	<arg name="extensions" value="php"/>
+	<arg value="sp"/>
+	<arg name="colors"/>
+	<config name="testVersion" value="8.0-"/>
+	<config name="minimum_wp_version" value="6.0"/>
+	<rule ref="WordPress"/>
+	<rule ref="PHPCompatibilityWP"/>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="csfss"/>
+			</property>
+		</properties>
+	</rule>
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="csf-sample-shortcode"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>
